@@ -1,0 +1,6 @@
+{
+  "name": "Lexis",
+  "description": "Comprehensive English learning suite featuring the Oxford 5000 dictionary, dual US/UK audio, smart SM-2 flashcards, multi-mode quizzes, A1-C1 grammar & 1244 verbs, 500 stories, 500 multi-voice conversations, and detailed learning analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

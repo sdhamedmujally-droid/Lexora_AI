@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "UserLearningProfile": {
+      "title": "UserLearningProfile",
+      "description": "User's aggregated learning profile, CEFR target, streak, and overall mastery counters. Timestamps must be written with FieldValue.serverTimestamp().",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase UID" },
+        "displayName": { "type": "string", "description": "Learner display name" },
+        "preferredLevel": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1"] },
+        "streakDays": { "type": "integer", "description": "Current consecutive study days" },
+        "longestStreak": { "type": "integer", "description": "Longest consecutive study days" },
+        "lastActiveDay": { "type": "string", "description": "ISO date YYYY-MM-DD of last activity" },
+        "totalStudyMinutes": { "type": "integer", "description": "Accumulated study minutes" },
+        "wordsMasteredCount": { "type": "integer" },
+        "wordsLearningCount": { "type": "integer" },
+        "quizzesCompleted": { "type": "integer" },
+        "totalQuizScorePct": { "type": "integer" },
+        "storiesCompleted": { "type": "integer" },
+        "conversationsCompleted": { "type": "integer" },
+        "grammarCompleted": { "type": "integer" },
+        "verbsPracticed": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": [
+        "userId", "displayName", "preferredLevel", "streakDays", "longestStreak",
+        "lastActiveDay", "totalStudyMinutes", "wordsMasteredCount", "wordsLearningCount",
+        "quizzesCompleted", "totalQuizScorePct", "storiesCompleted", "conversationsCompleted",
+        "grammarCompleted", "verbsPracticed", "createdAt", "updatedAt"
+      ]
+    },
+    "WordProgress": {
+      "title": "WordProgress",
+      "description": "Per-headword favorite flag and SM-2 spaced repetition state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "headword": { "type": "string" },
+        "cefrLevel": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1"] },
+        "favorite": { "type": "boolean" },
+        "masteryState": { "type": "string", "enum": ["NEW", "LEARNING", "REVIEWING", "MASTERED"] },
+        "easeFactor": { "type": "number" },
+        "intervalDays": { "type": "integer" },
+        "repetitions": { "type": "integer" },
+        "nextReviewAtMs": { "type": "integer" },
+        "correctCount": { "type": "integer" },
+        "attemptCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "headword", "cefrLevel", "favorite", "masteryState",
+        "easeFactor", "intervalDays", "repetitions", "nextReviewAtMs",
+        "correctCount", "attemptCount", "createdAt", "updatedAt"
+      ]
+    },
+    "QuizAttempt": {
+      "title": "QuizAttempt",
+      "description": "Immutable record of a completed quiz session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string", "enum": ["VOCABULARY", "GRAMMAR", "STORY", "CONVERSATION"] },
+        "mode": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+        "cefrLevel": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1", "ALL"] },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "durationSeconds": { "type": "integer" },
+        "topicTitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "category", "mode", "difficulty", "cefrLevel",
+        "score", "totalQuestions", "durationSeconds", "topicTitle", "createdAt"
+      ]
+    },
+    "ContentProgress": {
+      "title": "ContentProgress",
+      "description": "Completion and best score for grammar rules, stories, conversations, and verbs.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "contentType": { "type": "string", "enum": ["GRAMMAR", "STORY", "CONVERSATION", "VERB"] },
+        "cefrLevel": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1"] },
+        "completed": { "type": "boolean" },
+        "bestScorePct": { "type": "integer" },
+        "minutesSpent": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "contentType", "cefrLevel", "completed",
+        "bestScorePct", "minutesSpent", "createdAt", "updatedAt"
+      ]
+    },
+    "DailyActivity": {
+      "title": "DailyActivity",
+      "description": "Daily study minutes, words reviewed, and quizzes taken for analytics charts.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "minutesStudied": { "type": "integer" },
+        "wordsReviewed": { "type": "integer" },
+        "quizzesTaken": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "dateKey", "minutesStudied", "wordsReviewed",
+        "quizzesTaken", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserLearningProfile" },
+      "description": "User-owned root learning profile and summary counters."
+    },
+    "/users/{userId}/word_progress/{wordId}": {
+      "schema": { "$ref": "WordProgress" },
+      "description": "Per-word favorites and SM-2 mastery progress for the authenticated user."
+    },
+    "/users/{userId}/quiz_attempts/{attemptId}": {
+      "schema": { "$ref": "QuizAttempt" },
+      "description": "Completed quiz history for analytics and review."
+    },
+    "/users/{userId}/content_progress/{itemId}": {
+      "schema": { "$ref": "ContentProgress" },
+      "description": "Grammar, story, conversation, and verb completion records."
+    },
+    "/users/{userId}/daily_activity/{dayId}": {
+      "schema": { "$ref": "DailyActivity" },
+      "description": "Daily study activity metrics keyed by YYYY-MM-DD."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include domain="file" path="datastore/" />
+    <exclude domain="database" path="lexis_oxford_v1.db" />
+    <exclude domain="sharedpref" path="com.google.firebase.appcheck.debug.store." />
+</full-backup-content>
