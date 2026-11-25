@@ -88,7 +88,8 @@ fun attemptAutoSignIn(
         return
     }
     val clientId = try {
-        context.getString(R.string.default_web_client_id)
+        val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        if (resId != 0) context.getString(resId) else throw IllegalStateException("Missing default_web_client_id")
     } catch (_: Exception) {
         onUnauthenticated()
         return
