@@ -9,6 +9,10 @@ import com.example.data.local.LexisDatabase
 import com.example.data.local.UserPreferencesRepository
 import com.example.data.remote.AiContentRepository
 import com.example.data.remote.UserProgressRepository
+import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 
 sealed interface LexisUiState<out T> {
@@ -25,8 +29,9 @@ class LexisContainer private constructor(appContext: Context) {
     val prefsRepository: UserPreferencesRepository = UserPreferencesRepository(appContext)
 
     private val databaseId: String = appContext.getString(R.string.firestore_database_id)
-    val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(databaseId)
-    val userProgressRepository: UserProgressRepository = UserProgressRepository(firestore)
+val firebaseAuth: FirebaseAuth? = try { if (FirebaseApp.getApps(appContext).isNotEmpty()) Firebase.auth else null } catch (_: Exception) { null }
+val firestore: FirebaseFirestore? = try { if (FirebaseApp.getApps(appContext).isNotEmpty()) FirebaseFirestore.getInstance(databaseId) else null } catch (_: Exception) { null }
+val userProgressRepository: UserProgressRepository = UserProgressRepository(firestore, firebaseAuth)
     val aiContentRepository: AiContentRepository = AiContentRepository(dao)
     val audioEngine: DualAccentAudioEngine = DualAccentAudioEngine(appContext)
 
