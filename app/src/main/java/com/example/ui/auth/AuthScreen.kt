@@ -127,7 +127,7 @@ fun onGoogleSignInClicked(
     onAuthCancelled: () -> Unit = {}
 ) {
     val clientId = try {
-        context.getString(R.string.default_web_client_id)
+        context.resources.getIdentifier("default_web_client_id", "string", context.packageName).let { resId -> if (resId != 0) context.getString(resId) else throw IllegalStateException("Missing default_web_client_id") }
     } catch (_: Exception) {
         onAuthError("إعداد Google Sign-In غير مكتمل: لم يتم العثور على default_web_client_id")
         return
