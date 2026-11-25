@@ -48,7 +48,7 @@ private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateExce
 
     fun observeProfile(userId: String): Flow<UserLearningProfile?> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val docRef = requireFirestore().collection("users").document(userId)
+        val firestore = db?.takeIf { userId != "local_user" } ?: run { emit(null); return@flow }; val docRef = firestore.collection("users").document(userId)
         emitAll(
             docRef.snapshots()
                 .map { snap ->
@@ -75,7 +75,7 @@ private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateExce
 
     fun observeWordProgressMap(userId: String): Flow<Map<String, WordProgress>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val colRef = requireFirestore().collection("users").document(userId).collection("word_progress")
+        val firestore = db?.takeIf { userId != "local_user" } ?: run { emit(emptyMap()); return@flow }; val colRef = firestore.collection("users").document(userId).collection("word_progress")
         emitAll(
             colRef.snapshots()
                 .map { snapshot ->
@@ -100,7 +100,7 @@ private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateExce
 
     fun observeQuizAttempts(userId: String): Flow<List<QuizAttempt>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val query = requireFirestore().collection("users").document(userId)
+        val firestore = db?.takeIf { userId != "local_user" } ?: run { emit(emptyList()); return@flow }; val query = firestore.collection("users").document(userId)
             .collection("quiz_attempts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(40)
@@ -128,7 +128,7 @@ private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateExce
 
     fun observeContentProgress(userId: String): Flow<Map<String, ContentProgress>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val colRef = requireFirestore().collection("users").document(userId).collection("content_progress")
+        val firestore = db?.takeIf { userId != "local_user" } ?: run { emit(emptyMap()); return@flow }; val colRef = firestore.collection("users").document(userId).collection("content_progress")
         emitAll(
             colRef.snapshots()
                 .map { snapshot ->
@@ -153,7 +153,7 @@ private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateExce
 
     fun observeDailyActivity(userId: String): Flow<List<DailyActivity>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val query = requireFirestore().collection("users").document(userId)
+        val firestore = db?.takeIf { userId != "local_user" } ?: run { emit(emptyList()); return@flow }; val query = firestore.collection("users").document(userId)
             .collection("daily_activity")
             .orderBy("dateKey", Query.Direction.DESCENDING)
             .limit(14)
