@@ -66,6 +66,7 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.CoroutineScope
@@ -83,6 +84,7 @@ fun attemptAutoSignIn(
     onUnauthenticated: () -> Unit,
     scope: CoroutineScope
 ) {
+    val firebaseAuth = try { if (FirebaseApp.getApps(context).isNotEmpty()) Firebase.auth else null } catch (_: Exception) { null }; if (firebaseAuth == null) { onUnauthenticated(); return }
     if (Firebase.auth.currentUser != null) {
         onAuthSuccess()
         return
@@ -126,6 +128,7 @@ fun onGoogleSignInClicked(
     scope: CoroutineScope,
     onAuthCancelled: () -> Unit = {}
 ) {
+    val firebaseAuth = try { if (FirebaseApp.getApps(context).isNotEmpty()) Firebase.auth else null } catch (_: Exception) { null }; if (firebaseAuth == null) { onAuthError("Firebase is not initialized."); return }
     val clientId = try {
         context.resources.getIdentifier("default_web_client_id", "string", context.packageName).let { resId -> if (resId != 0) context.getString(resId) else throw IllegalStateException("Missing default_web_client_id") }
     } catch (_: Exception) {
@@ -173,7 +176,7 @@ fun signOutLexis(
             } catch (e: Exception) {
                 Log.w(AUTH_TAG, "Failed to clear credential state: ${e.message}")
             } finally {
-                Firebase.auth.signOut()
+                try { FirebaseApp.getInstance(); Firebase.auth.signOut() } catch (_: Exception) { }
                 onSignOutComplete()
             }
         }
