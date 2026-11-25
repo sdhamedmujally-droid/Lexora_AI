@@ -3,6 +3,7 @@ package com.example.data.remote
 import android.content.Context
 import com.example.R
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -23,17 +24,15 @@ import java.util.Date
 import java.util.Locale
 
 class UserProgressRepository(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth = Firebase.auth
+  private val db: FirebaseFirestore?,
+private val auth: FirebaseAuth? = try { FirebaseApp.getInstance(); Firebase.auth } catch (_: Exception) { null }
 ) {
-    constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
-    )
+constructor(context: Context) : this(try { if (FirebaseApp.getApps(context.applicationContext).isNotEmpty()) FirebaseFirestore.getInstance(context.applicationContext.getString(R.string.firestore_database_id)) else null } catch (_: Exception) { null }, try { if (FirebaseApp.getApps(context.applicationContext).isNotEmpty()) Firebase.auth else null } catch (_: Exception) { null })
+
+private fun requireFirestore(): FirebaseFirestore = db ?: throw IllegalStateException("Firebase is not initialized.")
 
     private fun requireUserId(): String {
-        return auth.currentUser?.uid?.takeIf { it.isNotBlank() }
+        return auth?.currentUser?.uid?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
     }
 
@@ -49,7 +48,7 @@ class UserProgressRepository(
 
     fun observeProfile(userId: String): Flow<UserLearningProfile?> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val docRef = db.collection("users").document(userId)
+        val docRef = requireFirestore().collection("users").document(userId)
         emitAll(
             docRef.snapshots()
                 .map { snap ->
@@ -66,7 +65,7 @@ class UserProgressRepository(
                         .firstOrNull()
                     if (firestoreError == null && error is CancellationException) throw error
                     val exceptionToLog = firestoreError ?: (error as? Exception)
-                    if (exceptionToLog != null && auth.currentUser?.uid == userId) {
+                    if (exceptionToLog != null && auth?.currentUser?.uid == userId) {
                         handleFirestoreError(exceptionToLog, OperationType.GET, docRef.path)
                     }
                     throw error
@@ -76,7 +75,7 @@ class UserProgressRepository(
 
     fun observeWordProgressMap(userId: String): Flow<Map<String, WordProgress>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val colRef = db.collection("users").document(userId).collection("word_progress")
+        val colRef = requireFirestore().collection("users").document(userId).collection("word_progress")
         emitAll(
             colRef.snapshots()
                 .map { snapshot ->
@@ -91,7 +90,7 @@ class UserProgressRepository(
                         .firstOrNull()
                     if (firestoreError == null && error is CancellationException) throw error
                     val exceptionToLog = firestoreError ?: (error as? Exception)
-                    if (exceptionToLog != null && auth.currentUser?.uid == userId) {
+                    if (exceptionToLog != null && auth?.currentUser?.uid == userId) {
                         handleFirestoreError(exceptionToLog, OperationType.LIST, colRef.path)
                     }
                     throw error
@@ -101,7 +100,7 @@ class UserProgressRepository(
 
     fun observeQuizAttempts(userId: String): Flow<List<QuizAttempt>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val query = db.collection("users").document(userId)
+        val query = requireFirestore().collection("users").document(userId)
             .collection("quiz_attempts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(40)
@@ -119,7 +118,7 @@ class UserProgressRepository(
                         .firstOrNull()
                     if (firestoreError == null && error is CancellationException) throw error
                     val exceptionToLog = firestoreError ?: (error as? Exception)
-                    if (exceptionToLog != null && auth.currentUser?.uid == userId) {
+                    if (exceptionToLog != null && auth?.currentUser?.uid == userId) {
                         handleFirestoreError(exceptionToLog, OperationType.LIST, "users/$userId/quiz_attempts")
                     }
                     throw error
@@ -129,7 +128,7 @@ class UserProgressRepository(
 
     fun observeContentProgress(userId: String): Flow<Map<String, ContentProgress>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val colRef = db.collection("users").document(userId).collection("content_progress")
+        val colRef = requireFirestore().collection("users").document(userId).collection("content_progress")
         emitAll(
             colRef.snapshots()
                 .map { snapshot ->
@@ -144,7 +143,7 @@ class UserProgressRepository(
                         .firstOrNull()
                     if (firestoreError == null && error is CancellationException) throw error
                     val exceptionToLog = firestoreError ?: (error as? Exception)
-                    if (exceptionToLog != null && auth.currentUser?.uid == userId) {
+                    if (exceptionToLog != null && auth?.currentUser?.uid == userId) {
                         handleFirestoreError(exceptionToLog, OperationType.LIST, colRef.path)
                     }
                     throw error
@@ -154,7 +153,7 @@ class UserProgressRepository(
 
     fun observeDailyActivity(userId: String): Flow<List<DailyActivity>> = flow {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val query = db.collection("users").document(userId)
+        val query = requireFirestore().collection("users").document(userId)
             .collection("daily_activity")
             .orderBy("dateKey", Query.Direction.DESCENDING)
             .limit(14)
@@ -172,7 +171,7 @@ class UserProgressRepository(
                         .firstOrNull()
                     if (firestoreError == null && error is CancellationException) throw error
                     val exceptionToLog = firestoreError ?: (error as? Exception)
-                    if (exceptionToLog != null && auth.currentUser?.uid == userId) {
+                    if (exceptionToLog != null && auth?.currentUser?.uid == userId) {
                         handleFirestoreError(exceptionToLog, OperationType.LIST, "users/$userId/daily_activity")
                     }
                     throw error
@@ -181,16 +180,16 @@ class UserProgressRepository(
     }
 
     suspend fun ensureProfileExists(displayName: String?): Result<Unit> {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}"
         return try {
             val resolvedUid = requireUserId()
-            val docRef = db.collection("users").document(resolvedUid)
+            val docRef = requireFirestore().collection("users").document(resolvedUid)
             val snap = docRef.get().await()
             val today = todayDateKey()
             val yesterday = yesterdayDateKey()
             if (!snap.exists()) {
-                val cleanName = (displayName ?: auth.currentUser?.displayName ?: "Learner")
+                val cleanName = (displayName ?: auth?.currentUser?.displayName ?: "Learner")
                     .trim().take(100).ifBlank { "Learner" }
                 val profile = UserLearningProfile(
                     userId = resolvedUid,
@@ -229,11 +228,11 @@ class UserProgressRepository(
     }
 
     suspend fun updatePreferredLevel(level: String): Result<Unit> {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}"
         return try {
             val resolvedUid = requireUserId()
-            db.collection("users").document(resolvedUid).update(
+            requireFirestore().collection("users").document(resolvedUid).update(
                 mapOf(
                     "preferredLevel" to normalizeCefr(level),
                     "updatedAt" to FieldValue.serverTimestamp()
@@ -255,11 +254,11 @@ class UserProgressRepository(
         current: WordProgress?
     ): Result<Boolean> {
         val docId = sanitizeFirestoreId(wordId)
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}/word_progress/$docId"
         return try {
             val resolvedUid = requireUserId()
-            val docRef = db.collection("users").document(resolvedUid)
+            val docRef = requireFirestore().collection("users").document(resolvedUid)
                 .collection("word_progress").document(docId)
             val snap = docRef.get().await()
             val nextFav = !(current?.favorite ?: snap.getBoolean("favorite") ?: false)
@@ -298,11 +297,11 @@ class UserProgressRepository(
         quality: Sm2Quality
     ): Result<WordProgress> {
         val docId = sanitizeFirestoreId(wordId)
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}/word_progress/$docId"
         return try {
             val resolvedUid = requireUserId()
-            val docRef = db.collection("users").document(resolvedUid)
+            val docRef = requireFirestore().collection("users").document(resolvedUid)
                 .collection("word_progress").document(docId)
             val snap = docRef.get().await()
             val existing = if (snap.exists()) {
@@ -378,7 +377,7 @@ class UserProgressRepository(
         durationSeconds: Int,
         topicTitle: String
     ): Result<Unit> {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}/quiz_attempts"
         return try {
             val resolvedUid = requireUserId()
@@ -395,7 +394,7 @@ class UserProgressRepository(
                 durationSeconds = durationSeconds.coerceAtLeast(0).toLong(),
                 topicTitle = topicTitle
             )
-            db.collection("users").document(resolvedUid)
+            requireFirestore().collection("users").document(resolvedUid)
                 .collection("quiz_attempts")
                 .document()
                 .set(attempt.toCreateMap())
@@ -403,7 +402,7 @@ class UserProgressRepository(
 
             val pct = ((safeScore * 100.0) / safeTotal).toLong().coerceIn(0L, 100L)
             val mins = (durationSeconds / 60).coerceAtLeast(1).toLong()
-            val userDoc = db.collection("users").document(resolvedUid)
+            val userDoc = requireFirestore().collection("users").document(resolvedUid)
             userDoc.update(
                 mapOf(
                     "quizzesCompleted" to FieldValue.increment(1L),
@@ -438,11 +437,11 @@ class UserProgressRepository(
         minutesSpent: Int
     ): Result<Unit> {
         val docId = sanitizeFirestoreId(itemId)
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         val path = "users/${uid ?: "unauthenticated"}/content_progress/$docId"
         return try {
             val resolvedUid = requireUserId()
-            val docRef = db.collection("users").document(resolvedUid)
+            val docRef = requireFirestore().collection("users").document(resolvedUid)
                 .collection("content_progress").document(docId)
             val snap = docRef.get().await()
             val existing = if (snap.exists()) {
@@ -491,9 +490,9 @@ class UserProgressRepository(
                 if (counterField != null) {
                     updates[counterField] = FieldValue.increment(1L)
                 }
-                db.collection("users").document(resolvedUid).update(updates).await()
+                requireFirestore().collection("users").document(resolvedUid).update(updates).await()
             } else if (minutesSpent > 0) {
-                db.collection("users").document(resolvedUid).update(
+                requireFirestore().collection("users").document(resolvedUid).update(
                     mapOf(
                         "totalStudyMinutes" to FieldValue.increment(minutesSpent.toLong()),
                         "updatedAt" to FieldValue.serverTimestamp()
@@ -531,7 +530,7 @@ class UserProgressRepository(
         )
         if (masteredDelta != 0L) profileUpdates["wordsMasteredCount"] = FieldValue.increment(masteredDelta)
         if (learningDelta != 0L) profileUpdates["wordsLearningCount"] = FieldValue.increment(learningDelta)
-        db.collection("users").document(userId).update(profileUpdates).await()
+        requireFirestore().collection("users").document(userId).update(profileUpdates).await()
         bumpDailyActivityOnly(userId, minutesDelta, wordsReviewedDelta, quizzesDelta)
     }
 
@@ -542,7 +541,7 @@ class UserProgressRepository(
         quizzesDelta: Long
     ) {
         val dateKey = todayDateKey()
-        val dayRef = db.collection("users").document(userId)
+        val dayRef = requireFirestore().collection("users").document(userId)
             .collection("daily_activity").document(dateKey)
         val snap = dayRef.get().await()
         if (!snap.exists()) {
