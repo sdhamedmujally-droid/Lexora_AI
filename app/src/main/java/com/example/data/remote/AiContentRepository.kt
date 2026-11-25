@@ -81,33 +81,33 @@ class AiContentRepository(
     )
 
     private val wordModel by lazy {
-        Firebase.ai.generativeModel(
+        try { Firebase.ai.generativeModel(
             modelName = "gemini-3.8-flash",
             generationConfig = generationConfig {
                 responseMimeType = "application/json"
                 responseSchema = wordSchema
             }
-        )
+        ) } catch (_: Exception) { null }
     }
 
     private val storyModel by lazy {
-        Firebase.ai.generativeModel(
+        try { Firebase.ai.generativeModel(
             modelName = "gemini-3.8-flash",
             generationConfig = generationConfig {
                 responseMimeType = "application/json"
                 responseSchema = storySchema
             }
-        )
+        ) } catch (_: Exception) { null }
     }
 
     private val conversationModel by lazy {
-        Firebase.ai.generativeModel(
+        try { Firebase.ai.generativeModel(
             modelName = "gemini-3.8-flash",
             generationConfig = generationConfig {
                 responseMimeType = "application/json"
                 responseSchema = conversationSchema
             }
-        )
+        ) } catch (_: Exception) { null }
     }
 
     suspend fun enrichWord(word: WordEntryEntity): Result<WordEntryEntity> {
@@ -130,9 +130,11 @@ class AiContentRepository(
 
         return try {
             val response = withTimeout(60_000L) {
-                wordModel.generateContent(prompt)
+                wordModel?.generateContent(prompt)
+                // wordMo?del.generateContent(prompt)
             }
-            val raw = response.text ?: throw IllegalStateException("Empty AI response for word enrichment.")
+        val raw = response?.text ?: throw IllegalStateException("Empty AI response for word enrichment.")
+        //     val raw = respon?se.text ?: throw IllegalStateException("Empty AI response for word enrichment.")
             val json = JSONObject(raw)
             val ipaUs = json.optString("ipaUs", word.ipaUs)
             val ipaUk = json.optString("ipaUk", word.ipaUk)
@@ -184,9 +186,11 @@ class AiContentRepository(
 
         return try {
             val response = withTimeout(60_000L) {
-                storyModel.generateContent(prompt)
+                storyModel?.generateContent(prompt)
+                // storyModel.generateContent(prompt)
             }
-            val raw = response.text ?: throw IllegalStateException("Empty AI response for story generation.")
+            val raw = response?.text ?: throw IllegalStateException("Empty AI response for story generation.")
+            // val raw = response.text ?: throw IllegalStateException("Empty AI response for story generation.")
             val json = JSONObject(raw)
             val pArr = json.getJSONArray("paragraphs")
             val paragraphs = List(pArr.length()) { i ->
@@ -261,9 +265,11 @@ class AiContentRepository(
 
         return try {
             val response = withTimeout(60_000L) {
-                conversationModel.generateContent(prompt)
+                conversationModel?.generateContent(prompt)
+                // conversationModel.generateContent(prompt)
             }
-            val raw = response.text ?: throw IllegalStateException("Empty AI response for conversation generation.")
+            val raw = response?.text ?: throw IllegalStateException("Empty AI response for conversation generation.")
+            // val raw = response.text ?: throw IllegalStateException("Empty AI response for conversation generation.")
             val json = JSONObject(raw)
             val tArr = json.getJSONArray("turns")
             val turns = List(tArr.length()) { i ->
