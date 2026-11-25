@@ -94,7 +94,8 @@ fun AppNavigation(
     container: LexisContainer,
     arabicUi: Boolean
 ) {
-    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+    val firebaseAuth = container.firebaseAuth
+    var currentUser by remember { mutableStateOf(firebaseAuth?.currentUser) }
     var seeded by remember { mutableStateOf(false) }
     var seedError by remember { mutableStateOf<String?>(null) }
 
@@ -104,12 +105,12 @@ fun AppNavigation(
             .onFailure { seedError = it.localizedMessage ?: "تعذر تجهيز قاعدة بيانات المفردات المحلية" }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(firebaseAuth) {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             currentUser = auth.currentUser
         }
-        Firebase.auth.addAuthStateListener(listener)
-        onDispose { Firebase.auth.removeAuthStateListener(listener) }
+        firebaseAuth?.addAuthStateListener(listener)
+        onDispose { firebaseAuth?.removeAuthStateListener(listener) }
     }
 
     if (seedError != null) {
@@ -133,17 +134,17 @@ fun AppNavigation(
     }
 
     val user = currentUser
-    if (user == null) {
+    if (firebaseAuth != null && user == null) {
         AuthScreen(
-            onAuthSuccess = { currentUser = Firebase.auth.currentUser },
+            onAuthSuccess = { currentUser = firebaseAuth.currentUser },
             arabicUi = arabicUi
         )
     } else {
-        key(user.uid) {
+        key(user?.uid ?: "local_user") {
             MainLexisScaffold(
                 container = container,
-                currentUserId = user.uid,
-                displayName = user.displayName,
+                currentUserId = user?.uid ?: "local_user",
+                displayName = user?.displayName,
                 arabicUi = arabicUi
             )
         }
